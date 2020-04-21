@@ -1,3 +1,3 @@
-add_subdirectory(bidir_path_tracer)
-add_subdirectory(gui)
-add_subdirectory(path_tracer)
+add_subdirectory(benchmark)
+#add_subdirectory(benchmark_embree)
+add_subdirectory(benchmark_double_precision)

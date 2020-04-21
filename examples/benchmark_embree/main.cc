@@ -76,9 +76,6 @@ THE SOFTWARE.
 
 #include <embree3/rtcore.h>
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
@@ -149,24 +146,6 @@ static unsigned int CreateTriangleMesh(const example::Mesh<float> &mesh,
   return geom_id;
 }
 
-static void SaveImagePNG(const char *filename, const float *rgb, int width,
-                         int height) {
-  unsigned char *bytes = new unsigned char[size_t(width * height * 3)];
-  for (int y = 0; y < height; ++y) {
-    for (int x = 0; x < width; ++x) {
-      const int index = y * width + x;
-      bytes[index * 3 + 0] = static_cast<unsigned char>(
-          std::max(0.0f, std::min(rgb[index * 3 + 0] * 255.0f, 255.0f)));
-      bytes[index * 3 + 1] = static_cast<unsigned char>(
-          std::max(0.0f, std::min(rgb[index * 3 + 1] * 255.0f, 255.0f)));
-      bytes[index * 3 + 2] = static_cast<unsigned char>(
-          std::max(0.0f, std::min(rgb[index * 3 + 2] * 255.0f, 255.0f)));
-    }
-  }
-  stbi_write_png(filename, width, height, 3, bytes, width * 3);
-  delete[] bytes;
-}
-
 int main(int argc, char **argv) {
   (void)argc;
   (void)argv;
@@ -222,10 +201,8 @@ int main(int argc, char **argv) {
               << bounds.upper_y << ", " << bounds.upper_z << std::endl;
   }
 
-  int width = 1024;
-  int height = 1024;
-
-  std::vector<float> rgb(width * height * 3, 0.0f);
+  int width = 8192;
+  int height = 8192;
 
   auto t_start = std::chrono::high_resolution_clock::now();
   // Shoot rays.
@@ -262,27 +239,6 @@ int main(int argc, char **argv) {
         ray.hit.Ng_y = -ray.hit.Ng_y;
         ray.hit.Ng_z = -ray.hit.Ng_z;
       }
-      if ((ray.ray.tfar < kFar) && (ray.hit.geomID != RTC_INVALID_GEOMETRY_ID) &&
-          (ray.hit.primID != RTC_INVALID_GEOMETRY_ID)) {
-        const example::Mesh<float> &mesh = meshes[ray.hit.geomID];
-        // std::cout << "tfar " << ray.tfar << std::endl;
-        // Write your shader here.
-        float normal[3] = {0.0f, 0.0f, 0.0f};
-        unsigned int fid = ray.hit.primID;
-        if (mesh.facevarying_normals.size() > 0) {
-          // std::cout << "fid " << fid << std::endl;
-          normal[0] = mesh.facevarying_normals[9 * fid + 0];
-          normal[1] = mesh.facevarying_normals[9 * fid + 1];
-          normal[2] = mesh.facevarying_normals[9 * fid + 2];
-        }
-        // Flip Y
-        rgb[3 * size_t((height - y - 1) * width + x) + 0] =
-            0.5f * normal[0] + 0.5f;
-        rgb[3 * size_t((height - y - 1) * width + x) + 1] =
-            0.5f * normal[1] + 0.5f;
-        rgb[3 * size_t((height - y - 1) * width + x) + 2] =
-            0.5f * normal[2] + 0.5f;
-      }
     }
   }
   auto t_end = std::chrono::high_resolution_clock::now();
@@ -290,11 +246,8 @@ int main(int argc, char **argv) {
   std::cout <<  std::fixed << std::setprecision(2)
             << "Elapsed time " << elaspedTimeMs << " ms" << std::endl << std::flush;
 
-  // Save image.
-  SaveImagePNG("render.png", &rgb.at(0), width, height);
-
   rtcReleaseScene(scene);
   rtcReleaseDevice(device);
 
-  return EXIT_SUCCESS;
+  return 0;
 }
